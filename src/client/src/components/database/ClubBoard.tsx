@@ -281,6 +281,9 @@ const CAMERA_COLOR = { from: '#14b8a6', to: '#0d9488', border: '#14b8a6' }; // t
 
 const CameraNode = memo(function CameraNode({ data, selected }: NodeProps) {
   const [expanded, toggleExpanded] = useAutoCollapse(selected);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editKey, setEditKey] = useState('');
+  const [editValue, setEditValue] = useState('');
 
   const color = (data.color as Color | undefined) ?? CAMERA_COLOR;
   const from  = color.from;
@@ -296,6 +299,14 @@ const CameraNode = memo(function CameraNode({ data, selected }: NodeProps) {
 
   const displayName = String((data as Doc).name ?? (data as Doc).cameraName ?? (data as Doc)._id ?? 'Camera');
   const copyToClipboard = (t: string) => navigator.clipboard.writeText(t);
+
+  const handleDoubleClick = (key: string, value: unknown) => {
+    setEditingField(key);
+    setEditKey(key);
+    setEditValue(typeof value === 'object' ? JSON.stringify(value) : String(value ?? ''));
+  };
+  const handleSaveEdit = () => setEditingField(null);
+  const handleCancelEdit = () => setEditingField(null);
 
   return (
     <div style={{ borderColor: border, opacity: isDimmed ? 0.35 : 1 }}
@@ -337,15 +348,34 @@ const CameraNode = memo(function CameraNode({ data, selected }: NodeProps) {
           ))
         ) : (
           allEntries.map(([k, v]) => (
-            <div key={k} className="flex items-start gap-1.5 w-full text-xs">
-              <span className="text-gray-600 dark:text-gray-300 w-24 flex-shrink-0 font-bold truncate">{k}</span>
-              <div className="flex-1 min-w-0 text-gray-800 dark:text-gray-200">
-                {k === 'status' ? (
-                  <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${v === 'active' || v === 'online' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {String(v)}
-                  </span>
-                ) : renderValue(k, v, from, copyToClipboard)}
-              </div>
+            <div key={k} className="flex flex-col gap-1 text-xs group w-full">
+              {editingField === k ? (
+                <div className="flex-1 space-y-1">
+                  <input type="text" value={editKey} onChange={e => setEditKey(e.target.value)}
+                    className="w-full px-1 py-0.5 text-xs border rounded" style={{ borderColor: from }}
+                    placeholder="Field name" />
+                  <input type="text" value={editValue} onChange={e => setEditValue(e.target.value)}
+                    className="w-full px-1 py-0.5 text-xs border rounded" style={{ borderColor: from }}
+                    placeholder="Value" />
+                  <div className="flex gap-1">
+                    <button onClick={handleSaveEdit} className="px-2 py-0.5 text-white rounded text-xs" style={{ background: from }}>Save</button>
+                    <button onClick={handleCancelEdit} className="px-2 py-0.5 bg-gray-400 text-white rounded text-xs">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-1.5 w-full">
+                  <span className="text-gray-600 dark:text-gray-300 w-24 flex-shrink-0 font-bold truncate cursor-pointer hover:text-teal-600"
+                    onDoubleClick={() => handleDoubleClick(k, v)} title="Double-click to edit">{k}</span>
+                  <div className="flex-1 min-w-0 cursor-pointer text-gray-800 dark:text-gray-200 hover:text-teal-600"
+                    onDoubleClick={() => handleDoubleClick(k, v)} title="Double-click to edit">
+                    {k === 'status' ? (
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${v === 'active' || v === 'online' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {String(v)}
+                      </span>
+                    ) : renderValue(k, v, from, copyToClipboard)}
+                  </div>
+                </div>
+              )}
             </div>
           ))
         )}
