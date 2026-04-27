@@ -626,8 +626,6 @@ const WorkerNode = memo(function WorkerNode({ data, selected }: NodeProps) {
 // nodeTypes defined OUTSIDE component to prevent ReactFlow from re-registering on every render
 const nodeTypes = { clubNode: ClubNode, workerNode: WorkerNode, cameraNode: CameraNode, missionNode: MissionNode, annotationNode: AnnotationNode };
 
-// Deprecated - use statePersistenceService instead
-const storageKey = (connId: string, db: string) => `club-board:${connId}:${db}`;
 
 function loadSavedPositions(connId: string, db: string): Record<string, { x: number; y: number; color?: Color }> {
   // Use new service
@@ -638,7 +636,7 @@ function loadSavedPositions(connId: string, db: string): Record<string, { x: num
   
   const result: Record<string, { x: number; y: number; color?: Color }> = {};
   Object.keys(positions).forEach(id => {
-    result[id] = { ...positions[id], color: colors[id] as Color | undefined };
+    result[id] = { ...positions[id], color: colors[id] as unknown as Color | undefined };
   });
   return result;
 }

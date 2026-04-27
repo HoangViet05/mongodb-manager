@@ -84,7 +84,7 @@ function useAutoCollapse(selected: boolean | undefined): [boolean, () => void] {
 }
 
 // ─── Custom Node: User ────────────────────────────────────────────────────────
-function UserNode({ data, selected, id }: NodeProps) {
+function UserNode({ data, selected }: NodeProps) {
   const [expanded, toggleExpanded] = useAutoCollapse(selected);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editKey, setEditKey] = useState('');
@@ -102,7 +102,7 @@ function UserNode({ data, selected, id }: NodeProps) {
   const priorityEntries = priorityFields
     .map(k => [k, (data as Doc)[k]] as [string, unknown])
     .filter(([, v]) => v !== undefined);
-  const otherEntries = allEntries.filter(([k]) => !priorityFields.includes(k));
+  const _otherEntries = allEntries.filter(([k]) => !priorityFields.includes(k));
 
   const handleDoubleClick = (key: string, value: unknown) => {
     setEditingField(key);
@@ -307,7 +307,7 @@ function UserNode({ data, selected, id }: NodeProps) {
 }
 
 // ─── Custom Node: UserPattern ─────────────────────────────────────────────────
-function PatternNode({ data, id, selected }: NodeProps) {
+function PatternNode({ data, selected }: NodeProps) {
   const [expanded, toggleExpanded] = useAutoCollapse(selected);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editKey, setEditKey] = useState('');
@@ -670,7 +670,7 @@ function RelationBoardInner({ connectionId, database, users }: RelationBoardProp
     if (selectedUserId) {
       setNodes(nds => {
         const updated = nds.map(n => {
-          const c = changes.find((ch: { id: string }) => ch.id === n.id);
+          const c = changes.find((ch) => 'id' in ch && ch.id === n.id);
           if (c && 'position' in c && c.position) return { ...n, position: c.position };
           return n;
         });

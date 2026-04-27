@@ -2,7 +2,6 @@
 // Handles all localStorage operations for node positions, colors, camera visibility, etc.
 
 import { Node } from 'reactflow';
-import { AnnotationColor } from '../types/annotations';
 
 // ============================================================================
 // Type Definitions
@@ -55,7 +54,7 @@ class StatePersistenceService {
 
   // Generate storage key following pattern: {feature}:{boardKey}:{database}
   // Note: We use database name only (not connectionId) for stable keys across server restarts
-  private generateKey(feature: string, connectionId: string, database: string, boardKey: string = 'club-board'): string {
+  private generateKey(feature: string, _connectionId: string, database: string, boardKey: string = 'club-board'): string {
     // Use only database name for stable localStorage keys
     // connectionId changes on server restart, so we can't use it
     return `${feature}:${boardKey}:${database}`;
