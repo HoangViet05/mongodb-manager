@@ -47,10 +47,10 @@ export function createProfile(
   return profile;
 }
 
-export function listProfiles(): ConnectionProfile[] {
+export function listProfiles(): (ConnectionProfile & { status: ConnectionStatus })[] {
   return Array.from(connections.values()).map((state) => {
     const { password, ...rest } = state.profile;
-    return rest as ConnectionProfile;
+    return { ...rest as ConnectionProfile, status: state.status };
   });
 }
 

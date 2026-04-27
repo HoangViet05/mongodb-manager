@@ -42,8 +42,15 @@ export function ConnectionPanel() {
         data.map(async (conn) => {
           try {
             const status = await getConnectionStatus(conn.id);
-            updateConnectionStatus(conn.id, status);
-            if (status.status === 'connected') {
+            if (status.status !== 'connected') {
+              // Auto-reconnect if not connected
+              const reconnected = await connectToMongo(conn.id);
+              updateConnectionStatus(conn.id, reconnected);
+              if (reconnected.status === 'connected') {
+                setActiveConnection(conn.id);
+              }
+            } else {
+              updateConnectionStatus(conn.id, status);
               setActiveConnection(conn.id);
             }
           } catch {
