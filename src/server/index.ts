@@ -6,8 +6,8 @@ import { createProfile, connect, parseUri } from './connections/connectionManage
 import path from 'path';
 
 // Load .env from project root (mongo-db-manager/)
-// __dirname in compiled code points to dist/, so go up 2 levels: dist/ -> src/server/ -> mongo-db-manager/
-const envPath = path.resolve(__dirname, '../../.env');
+// __dirname in compiled code points to dist/, so go up 3 levels: dist/ -> server/ -> src/ -> mongo-db-manager/
+const envPath = path.resolve(__dirname, '../../../.env');
 dotenv.config({ path: envPath });
 console.log('[dotenv] Loading from:', envPath, '| MONGO_URI:', process.env.MONGO_URI ? 'found' : 'not found');
 
