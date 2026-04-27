@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { DocumentViewer } from './DocumentViewer';
+import apiClient from '../../api/apiClient';
 
 interface Database {
   name: string;
@@ -39,10 +40,9 @@ export function DatabaseExplorer() {
     if (!activeConnectionId) return;
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/connections/${activeConnectionId}/databases`);
-      const result = await response.json();
-      if (result.success) {
-        setDatabases(result.data);
+      const response = await apiClient.get(`/connections/${activeConnectionId}/databases`);
+      if (response.data.success) {
+        setDatabases(response.data.data);
       }
     } catch (err) {
       console.error('Failed to load databases:', err);
@@ -56,19 +56,17 @@ export function DatabaseExplorer() {
     setLoading(true);
     setSelectedCollection(null);
     try {
-      const response = await fetch(`http://localhost:3001/api/connections/${activeConnectionId}/databases/${dbName}/collections`);
-      const result = await response.json();
-      console.log('Collections response:', result);
-      if (result.success) {
-        setCollections(result.data);
+      const response = await apiClient.get(`/connections/${activeConnectionId}/databases/${dbName}/collections`);
+      console.log('Collections response:', response.data);
+      if (response.data.success) {
+        setCollections(response.data.data);
         setSelectedDb(dbName);
-        // Auto-select users collection if exists
-        const usersCol = result.data.find((col: Collection) => col.name === 'users');
+        const usersCol = response.data.data.find((col: Collection) => col.name === 'users');
         if (usersCol) {
           setSelectedCollection('users');
         }
       } else {
-        console.error('Failed to load collections:', result.error);
+        console.error('Failed to load collections:', response.data.error);
       }
     } catch (err) {
       console.error('Failed to load collections:', err);

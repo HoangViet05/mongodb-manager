@@ -12,6 +12,7 @@ import { COLOR_PRESETS } from '../../types/annotations';
 import { AnnotationNode } from './AnnotationNode';
 import { saveAnnotations, loadAnnotations } from '../../utils/annotationStorage';
 import { statePersistenceService } from '../../utils/statePersistence';
+import apiClient from '../../api/apiClient';
 
 interface Doc { [key: string]: unknown; }
 
@@ -942,10 +943,10 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
     setResultPanel({ missionId, missionName, results: [], loading: true });
     setResultFilters({});
     try {
-      const res = await fetch(
-        `http://localhost:3001/api/connections/${connectionId}/databases/${database}/collections/result_missions/documents?pageSize=5000`
+      const res = await apiClient.get(
+        `/connections/${connectionId}/databases/${database}/collections/result_missions/documents?pageSize=5000`
       );
-      const json = await res.json();
+      const json = res.data;
       const all: Doc[] = json.success ? json.data.documents : [];
       const matched = all
         .filter(r => String(r.clubMissionId ?? '') === missionId)
@@ -1099,15 +1100,9 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
 
     setLoading(true);
     Promise.all([
-      fetch(
-        `http://localhost:3001/api/connections/${connectionId}/databases/${database}/collections/workers/documents?pageSize=500`
-      ).then(r => r.json()),
-      fetch(
-        `http://localhost:3001/api/connections/${connectionId}/databases/${database}/collections/cameras/documents?pageSize=500`
-      ).then(r => r.json()),
-      fetch(
-        `http://localhost:3001/api/connections/${connectionId}/databases/${database}/collections/clubs_missions/documents?pageSize=1000`
-      ).then(r => r.json()),
+      apiClient.get(`/connections/${connectionId}/databases/${database}/collections/workers/documents?pageSize=500`).then(r => r.data),
+      apiClient.get(`/connections/${connectionId}/databases/${database}/collections/cameras/documents?pageSize=500`).then(r => r.data),
+      apiClient.get(`/connections/${connectionId}/databases/${database}/collections/clubs_missions/documents?pageSize=1000`).then(r => r.data),
     ])
       .then(([workerResult, cameraResult, missionResult]) => {
         const allWorkers: Doc[]  = workerResult.success  ? workerResult.data.documents  : [];
@@ -1201,13 +1196,9 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
   const updateClubWorker = useCallback(async (clubId: string, workerId: string | null) => {
     const idField = workerIdFieldRef.current;
     const clubDocId = clubId.replace('club-', '');
-    await fetch(
-      `http://localhost:3001/api/connections/${connectionId}/databases/${database}/collections/clubs/documents/${clubDocId}`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [idField]: workerId }),
-      }
+    await apiClient.put(
+      `/connections/${connectionId}/databases/${database}/collections/clubs/documents/${clubDocId}`,
+      { [idField]: workerId }
     );
     // Update node data locally
     setNodes(nds => nds.map(n =>

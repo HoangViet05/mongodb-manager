@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { RelationBoard } from './RelationBoard';
 import { ClubBoard } from './ClubBoard';
 import { useCardAnimations } from './useCardAnimations';
+import apiClient from '../../api/apiClient';
 
 /**
  * Scrolls to keep an expanded card visible when it extends below the viewport
@@ -50,11 +51,10 @@ async function fetchDocuments(
   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
   if (filter) params.set('filter', JSON.stringify(filter));
   if (sort) params.set('sort', JSON.stringify(sort));
-  const res = await fetch(
-    `http://localhost:3001/api/connections/${connectionId}/databases/${database}/collections/${collection}/documents?${params}`
+  const res = await apiClient.get(
+    `/connections/${connectionId}/databases/${database}/collections/${collection}/documents?${params}`
   );
-  const result = await res.json();
-  return result.success ? result.data : { documents: [], total: 0 };
+  return res.data.success ? res.data.data : { documents: [], total: 0 };
 }
 
 function DocCard({

@@ -7,6 +7,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { v4 as uuidv4 } from 'uuid';
+import apiClient from '../../api/apiClient';
 
 interface Doc { [key: string]: unknown; }
 
@@ -618,10 +619,10 @@ function RelationBoardInner({ connectionId, database, users }: RelationBoardProp
           filter.status = statusFilter;
         }
         
-        const res = await fetch(
-          `http://localhost:3001/api/connections/${connectionId}/databases/${database}/collections/user_patterns/documents?filter=${encodeURIComponent(JSON.stringify(filter))}&pageSize=50`
+        const res = await apiClient.get(
+          `/connections/${connectionId}/databases/${database}/collections/user_patterns/documents?filter=${encodeURIComponent(JSON.stringify(filter))}&pageSize=50`
         );
-        const result = await res.json();
+        const result = res.data;
         const patterns: Doc[] = result.success ? result.data.documents : [];
         const saved = loadSaved();
 
@@ -712,10 +713,10 @@ function RelationBoardInner({ connectionId, database, users }: RelationBoardProp
         filter.status = statusFilter;
       }
       
-      const res = await fetch(
-        `http://localhost:3001/api/connections/${connectionId}/databases/${database}/collections/user_patterns/documents?filter=${encodeURIComponent(JSON.stringify(filter))}&pageSize=50`
+      const res = await apiClient.get(
+        `/connections/${connectionId}/databases/${database}/collections/user_patterns/documents?filter=${encodeURIComponent(JSON.stringify(filter))}&pageSize=50`
       );
-      const result = await res.json();
+      const result = res.data;
       const patterns: Doc[] = result.success ? result.data.documents : [];
       const saved = loadSaved();
 
