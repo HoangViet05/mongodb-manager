@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Card animation styles - Requirements 3.4, 6.2 */
+.card-animated {
+  /* Use transform for GPU-accelerated animations */
+  transition-property: transform;
+  transition-duration: 300ms;
+  transition-timing-function: ease-in-out;
+  
+  /* Force GPU acceleration for optimal performance */
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Reduced motion support for card animations - Requirement 9.3 */
+@media (prefers-reduced-motion: reduce) {
+  .card-animated {
+    transition-duration: 0ms !important;
+    will-change: auto;
+  }
+  
+  * {
+    transition-duration: 0ms !important;
+  }
+}

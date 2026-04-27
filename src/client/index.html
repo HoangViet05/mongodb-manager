@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MongoDB Manager</title>
+    <script>
+      // Global error handler to suppress browser extension connection errors
+      window.addEventListener('error', function(event) {
+        // Check if this is a browser extension communication error
+        if (event.message && 
+            event.message.includes('Could not establish connection') &&
+            event.message.includes('Receiving end does not exist')) {
+          // Suppress the error
+          event.preventDefault();
+          event.stopPropagation();
+          return true;
+        }
+        // Allow other errors to propagate normally
+        return false;
+      }, true);
+
+      // Wrap chrome.runtime.sendMessage to handle extension context invalidation errors
+      if (typeof chrome !== 'undefined' && chrome.runtime) {
+        const originalSendMessage = chrome.runtime.sendMessage;
+        chrome.runtime.sendMessage = function(...args) {
+          try {
+            return originalSendMessage.apply(this, args);
+          } catch (e) {
+            // Silently catch extension communication errors
+            if (e.message && e.message.includes('Extension context invalidated')) {
+              return;
+            }
+            throw e;
+          }
+        };
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

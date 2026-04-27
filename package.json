@@ -1,0 +1,13 @@
+{
+  "name": "mongo-db-manager",
+  "version": "1.0.0",
+  "description": "MongoDB Manager - Full-stack web app for managing MongoDB",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix src/server\" \"npm run dev --prefix src/client\"",
+    "build": "npm run build --prefix src/server && npm run build --prefix src/client",
+    "install:all": "npm install && npm install --prefix src/server && npm install --prefix src/client"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
