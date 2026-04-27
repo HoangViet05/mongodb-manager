@@ -102,7 +102,6 @@ function UserNode({ data, selected }: NodeProps) {
   const priorityEntries = priorityFields
     .map(k => [k, (data as Doc)[k]] as [string, unknown])
     .filter(([, v]) => v !== undefined);
-  const _otherEntries = allEntries.filter(([k]) => !priorityFields.includes(k));
 
   const handleDoubleClick = (key: string, value: unknown) => {
     setEditingField(key);
