@@ -48,7 +48,6 @@ export function DocCard({
   onDelete,
   priorityFields,
   cardRef,
-  positionOffset,
 }: DocCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
@@ -160,7 +159,6 @@ export function DocCard({
             ? 'border-green-500 bg-green-50 dark:bg-green-900/20 shadow-lg'
             : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-green-400 hover:shadow-md'
         }`}
-      style={{ transform: `translateY(${positionOffset ?? 0}px)` }}
       onClick={cardClickHandler}
       onDoubleClick={(e) => {
         if (isEditing) return;
