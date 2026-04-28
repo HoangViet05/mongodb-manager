@@ -1,42 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import toast from 'react-hot-toast';
 import { RelationBoard } from './RelationBoard';
 import { ClubBoard } from './ClubBoard';
+import { DocCard, type Doc } from './DocCard';
+import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { SearchBar } from './SearchBar';
 import { useCardAnimations } from './useCardAnimations';
 import apiClient from '../../api/apiClient';
-
-/**
- * Scrolls to keep an expanded card visible when it extends below the viewport
- * 
- * @param cardElement - The card DOM element that was expanded
- * 
- * Requirements: 7.1, 7.2, 7.3, 7.4
- */
-function scrollToExpandedCard(cardElement: HTMLDivElement): void {
-  // Get the card's bounding rectangle
-  const cardRect = cardElement.getBoundingClientRect();
-  
-  // Check if card extends below the viewport
-  const viewportHeight = window.innerHeight;
-  const cardBottom = cardRect.bottom;
-  
-  // Requirement 7.2: If card is fully visible, don't adjust scroll
-  if (cardBottom <= viewportHeight && cardRect.top >= 0) {
-    return;
-  }
-  
-  // Requirement 7.1: If card extends below viewport, scroll to keep it visible
-  // Requirement 7.4: If expanded content is larger than viewport, show top of card
-  cardElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-interface Doc {
-  [key: string]: unknown;
-}
 
 interface DocumentViewerProps {
   connectionId: string;
   database: string;
   collection: string;
+  reloadToken?: number;
+}
+
+interface SearchFilter {
+  field: string;
+  value: string;
+}
+
+function buildSearchFilter(searchFilter: SearchFilter | null): Record<string, unknown> | undefined {
+  if (!searchFilter) return undefined;
+  const { field, value } = searchFilter;
+  if (field === '_id') {
+    return { _id: value };
+  }
+  if (value === 'true' || value === 'false') {
+    return { [field]: value === 'true' };
+  }
+  if (value !== '' && !Number.isNaN(Number(value)) && /^-?\d+(\.\d+)?$/.test(value)) {
+    return { [field]: Number(value) };
+  }
+  const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return { [field]: { $regex: escaped, $options: 'i' } };
 }
 
 async function fetchDocuments(
@@ -55,106 +52,6 @@ async function fetchDocuments(
     `/connections/${connectionId}/databases/${database}/collections/${collection}/documents?${params}`
   );
   return res.data.success ? res.data.data : { documents: [], total: 0 };
-}
-
-function DocCard({
-  doc,
-  index,
-  isSelected,
-  onClick,
-  priorityFields,
-  cardRef,
-  positionOffset,
-}: {
-  doc: Doc;
-  index: number;
-  isSelected: boolean;
-  onClick?: () => void;
-  priorityFields?: string[];
-  cardRef?: React.RefObject<HTMLDivElement>;
-  positionOffset?: number;
-}) {
-  const [expanded, setExpanded] = useState(false);
-
-  // Scroll management: when card expands, scroll to keep it visible
-  // Requirement 7.1, 7.2, 7.3, 7.4
-  useEffect(() => {
-    // Only scroll when expanding (not when collapsing - Requirement 7.3)
-    if (expanded && cardRef?.current) {
-      // Small delay to allow the card to render its expanded content
-      // This ensures accurate height measurements for scrollIntoView
-      const timeoutId = setTimeout(() => {
-        if (cardRef.current) {
-          scrollToExpandedCard(cardRef.current);
-        }
-      }, 50); // Small delay after expansion animation starts
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [expanded, cardRef]);
-
-  // Build summary fields: priority fields first, then others (skip _id, __v)
-  const allFields = Object.entries(doc).filter(([k]) => k !== '_id' && k !== '__v');
-  const priority = priorityFields ?? [];
-  const priorityEntries = priority
-    .map(k => [k, doc[k]] as [string, unknown])
-    .filter(([, v]) => v !== undefined);
-  const otherEntries = allFields.filter(([k]) => !priority.includes(k));
-  const summaryEntries = [...priorityEntries, ...otherEntries].slice(0, 6);
-
-  return (
-    <div
-      ref={cardRef}
-      className={`card-animated rounded-xl border-2 transition-all shadow-sm p-4 cursor-pointer
-        ${isSelected
-          ? 'border-green-500 bg-green-50 dark:bg-green-900/20 shadow-lg'
-          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-green-400 hover:shadow-md'
-        }`}
-      style={{ transform: `translateY(${positionOffset ?? 0}px)` }}
-      onClick={onClick}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-            {index}
-          </div>
-          <span className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate max-w-xs">
-            {String(doc._id)}
-          </span>
-        </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-          className="text-gray-400 hover:text-green-600 transition-colors ml-2 flex-shrink-0"
-          title={expanded ? 'Collapse' : 'Expand'}
-        >
-          <svg className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Summary row */}
-      {!expanded && (
-        <div className="flex flex-wrap gap-2 mt-1">
-          {summaryEntries.map(([k, v]) => (
-              <span key={k} className="text-xs bg-gray-100 dark:bg-gray-700 rounded px-2 py-0.5">
-                <span className="text-gray-500 dark:text-gray-400">{k}: </span>
-                <span className="text-gray-800 dark:text-gray-200 font-medium">
-                  {v === null ? 'null' : typeof v === 'object' ? '{…}' : String(v).slice(0, 30)}
-                </span>
-              </span>
-            ))}
-        </div>
-      )}
-
-      {/* Full JSON */}
-      {expanded && (
-        <pre className="text-xs bg-gray-50 dark:bg-gray-900 p-3 rounded-lg overflow-x-auto border border-gray-200 dark:border-gray-700 mt-2">
-          <code className="text-gray-800 dark:text-gray-200">{JSON.stringify(doc, null, 2)}</code>
-        </pre>
-      )}
-    </div>
-  );
 }
 
 function PaginationBar({
@@ -187,7 +84,7 @@ function PaginationBar({
   );
 }
 
-export function DocumentViewer({ connectionId, database, collection }: DocumentViewerProps) {
+export function DocumentViewer({ connectionId, database, collection, reloadToken }: DocumentViewerProps) {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -195,10 +92,13 @@ export function DocumentViewer({ connectionId, database, collection }: DocumentV
   const [total, setTotal] = useState(0);
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
 
-  // Animation system for main panel cards
+  const [editingDocId, setEditingDocId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ doc: Doc; collection: string } | null>(null);
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchFilter, setSearchFilter] = useState<SearchFilter | null>(null);
+
   const { cardRefs: mainCardRefs, positionOffsets: mainPositionOffsets } = useCardAnimations(docs.length);
 
-  // Related panel state
   const [selectedUser, setSelectedUser] = useState<Doc | null>(null);
   const [relatedDocs, setRelatedDocs] = useState<Doc[]>([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
@@ -206,7 +106,6 @@ export function DocumentViewer({ connectionId, database, collection }: DocumentV
   const [relatedPage, setRelatedPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Animation system for related panel cards (independent from main panel)
   const { cardRefs: relatedCardRefs, positionOffsets: relatedPositionOffsets } = useCardAnimations(relatedDocs.length);
 
   const isUsersCollection = collection === 'users';
@@ -217,49 +116,54 @@ export function DocumentViewer({ connectionId, database, collection }: DocumentV
     setSelectedUser(null);
     setRelatedDocs([]);
     setStatusFilter('all');
-  }, [collection]);
+    setEditingDocId(null);
+    setSearchFilter(null);
+    setSearchVisible(false);
+  }, [collection, database, connectionId]);
 
-  useEffect(() => {
-    load();
-  }, [connectionId, database, collection, page]);
-
-  useEffect(() => {
-    if (selectedUser) loadRelated(selectedUser, relatedPage);
-  }, [relatedPage, statusFilter]);
-
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchDocuments(connectionId, database, collection, page, pageSize);
+      const filter = buildSearchFilter(searchFilter);
+      const data = await fetchDocuments(connectionId, database, collection, page, pageSize, filter);
       setDocs(data.documents);
       setTotal(data.total);
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: string } }; message?: string };
+      toast.error(e?.response?.data?.error ?? e?.message ?? 'Không tải được dữ liệu');
     } finally {
       setLoading(false);
     }
-  };
+  }, [connectionId, database, collection, page, searchFilter]);
 
-  const loadRelated = async (user: Doc, rPage = 1) => {
+  useEffect(() => {
+    load();
+  }, [load, reloadToken]);
+
+  const loadRelated = useCallback(async (user: Doc, rPage = 1) => {
     const externalId = user.externalId;
     if (!externalId) return;
     setRelatedLoading(true);
     try {
-      // Build filter: always include externalId, optionally add status
       const filter: Record<string, unknown> = { externalId };
       if (statusFilter !== 'all') {
         filter.status = statusFilter;
       }
-      
       const data = await fetchDocuments(
         connectionId, database, 'user_patterns', rPage, 20,
         filter,
-        { createdAt: -1 } // Sort by createdAt descending (newest first)
+        { createdAt: -1 }
       );
       setRelatedDocs(data.documents);
       setRelatedTotal(data.total);
     } finally {
       setRelatedLoading(false);
     }
-  };
+  }, [connectionId, database, statusFilter]);
+
+  useEffect(() => {
+    if (selectedUser) loadRelated(selectedUser, relatedPage);
+  }, [relatedPage, statusFilter, selectedUser, loadRelated]);
 
   const handleUserClick = (user: Doc) => {
     if (selectedUser && String(selectedUser._id) === String(user._id)) {
@@ -274,14 +178,78 @@ export function DocumentViewer({ connectionId, database, collection }: DocumentV
     loadRelated(user, 1);
   };
 
+  const handleSave = async (doc: Doc, updated: Doc) => {
+    const docId = String(doc._id);
+    try {
+      const payload: Record<string, unknown> = { ...updated };
+      delete payload._id;
+      delete payload.__v;
+      await apiClient.put(
+        `/connections/${connectionId}/databases/${database}/collections/${collection}/documents/${docId}`,
+        payload
+      );
+      toast.success('Đã lưu');
+      setEditingDocId(null);
+      await load();
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: string } }; message?: string };
+      toast.error(e?.response?.data?.error ?? e?.message ?? 'Lưu thất bại');
+      throw err;
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    const docId = String(deleteTarget.doc._id);
+    const targetCollection = deleteTarget.collection;
+    try {
+      await apiClient.delete(
+        `/connections/${connectionId}/databases/${database}/collections/${targetCollection}/documents/${docId}`
+      );
+      toast.success('Đã xoá');
+      setDeleteTarget(null);
+      if (targetCollection === collection && selectedUser && String(selectedUser._id) === docId) {
+        setSelectedUser(null);
+        setRelatedDocs([]);
+      }
+      if (targetCollection === collection) {
+        await load();
+      } else if (selectedUser) {
+        await loadRelated(selectedUser, relatedPage);
+      }
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: string } }; message?: string };
+      toast.error(e?.response?.data?.error ?? e?.message ?? 'Xoá thất bại');
+    }
+  };
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setSearchVisible(true);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  const availableFields = useMemo(() => {
+    const set = new Set<string>();
+    docs.forEach(d => {
+      Object.keys(d).forEach(k => {
+        if (k !== '_id' && k !== '__v') set.add(k);
+      });
+    });
+    return Array.from(set).sort();
+  }, [docs]);
+
   const totalPages = Math.ceil(total / pageSize);
   const relatedTotalPages = Math.ceil(relatedTotal / 20);
 
   return (
     <div className="flex h-full">
-      {/* Main panel */}
       <div className={`flex flex-col transition-all duration-300 ${selectedUser && viewMode === 'list' ? 'w-1/2' : 'w-full'}`}>
-        {/* Header */}
         <div className="p-5 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -290,7 +258,21 @@ export function DocumentViewer({ connectionId, database, collection }: DocumentV
               </svg>
               {collection}
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">{database} • {total} documents</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {database} • {total} documents
+              {searchFilter && (
+                <span className="ml-2 inline-flex items-center gap-1 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200 px-2 py-0.5 rounded">
+                  Searching: <span className="font-mono">{searchFilter.field}={searchFilter.value}</span>
+                  <button
+                    onClick={() => { setSearchFilter(null); setPage(1); }}
+                    className="ml-1 hover:text-red-600"
+                    title="Clear search"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             {(isUsersCollection || isClubsCollection) && (
@@ -309,6 +291,16 @@ export function DocumentViewer({ connectionId, database, collection }: DocumentV
                 </button>
               </div>
             )}
+            <button
+              onClick={() => setSearchVisible(v => !v)}
+              className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all flex items-center gap-1.5"
+              title="Search (Ctrl+F)"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              Search
+            </button>
             <button onClick={load}
               className="px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all shadow flex items-center gap-1.5">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -319,72 +311,88 @@ export function DocumentViewer({ connectionId, database, collection }: DocumentV
           </div>
         </div>
 
-        {/* Board view */}
+        <SearchBar
+          visible={searchVisible}
+          availableFields={availableFields}
+          initialField={searchFilter?.field}
+          initialValue={searchFilter?.value}
+          onSearch={(field, value) => {
+            setSearchFilter({ field, value });
+            setPage(1);
+          }}
+          onClear={() => {
+            setSearchFilter(null);
+            setPage(1);
+          }}
+          onClose={() => {
+            setSearchVisible(false);
+            setSearchFilter(null);
+            setPage(1);
+          }}
+        />
+
         {viewMode === 'board' && isUsersCollection ? (
           <div className="flex-1">
-            <RelationBoard
-              connectionId={connectionId}
-              database={database}
-              users={docs}
-            />
+            <RelationBoard connectionId={connectionId} database={database} users={docs} />
           </div>
         ) : viewMode === 'board' && isClubsCollection ? (
           <div className="flex-1">
-            <ClubBoard
-              connectionId={connectionId}
-              database={database}
-              clubs={docs}
-            />
+            <ClubBoard connectionId={connectionId} database={database} clubs={docs} />
           </div>
         ) : (
-        <>
-        {/* Docs */}
-        <div className="flex-1 overflow-auto p-4">
-          {loading ? (
-            <div className="flex items-center justify-center h-48">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600" />
-            </div>
-          ) : docs.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">No documents found</div>
-          ) : (
-            <div className="space-y-3">
-              {isUsersCollection && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Click a user to view their patterns
-                </p>
+          <>
+            <div className="flex-1 overflow-auto p-4">
+              {loading ? (
+                <div className="flex items-center justify-center h-48">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600" />
+                </div>
+              ) : docs.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">No documents found</div>
+              ) : (
+                <div className="space-y-3">
+                  {isUsersCollection && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Click a user to view patterns • Double-click any card to edit
+                    </p>
+                  )}
+                  {docs.map((doc, i) => {
+                    const docId = String(doc._id);
+                    return (
+                      <DocCard
+                        key={docId}
+                        doc={doc}
+                        index={(page - 1) * pageSize + i + 1}
+                        isSelected={isUsersCollection && selectedUser ? String(selectedUser._id) === docId : false}
+                        isEditing={editingDocId === docId}
+                        onClick={isUsersCollection ? () => handleUserClick(doc) : undefined}
+                        onEnterEdit={() => setEditingDocId(docId)}
+                        onSave={(updated) => handleSave(doc, updated)}
+                        onCancel={() => setEditingDocId(null)}
+                        onDelete={() => setDeleteTarget({ doc, collection })}
+                        priorityFields={isUsersCollection ? ['userName', 'phone', 'externalId', 'status'] : undefined}
+                        cardRef={mainCardRefs[i]}
+                        positionOffset={mainPositionOffsets[i]}
+                      />
+                    );
+                  })}
+                </div>
               )}
-              {docs.map((doc, i) => (
-                <DocCard
-                  key={String(doc._id)}
-                  doc={doc}
-                  index={(page - 1) * pageSize + i + 1}
-                  isSelected={isUsersCollection && selectedUser ? String(selectedUser._id) === String(doc._id) : false}
-                  onClick={isUsersCollection ? () => handleUserClick(doc) : undefined}
-                  priorityFields={isUsersCollection ? ['userName', 'phone', 'externalId', 'status'] : undefined}
-                  cardRef={mainCardRefs[i]}
-                  positionOffset={mainPositionOffsets[i]}
-                />
-              ))}
             </div>
-          )}
-        </div>
 
-        <PaginationBar
-          page={page} totalPages={totalPages} total={total} pageSize={pageSize}
-          onPrev={() => setPage(p => Math.max(1, p - 1))}
-          onNext={() => setPage(p => Math.min(totalPages, p + 1))}
-        />
-        </>
+            <PaginationBar
+              page={page} totalPages={totalPages} total={total} pageSize={pageSize}
+              onPrev={() => setPage(p => Math.max(1, p - 1))}
+              onNext={() => setPage(p => Math.min(totalPages, p + 1))}
+            />
+          </>
         )}
       </div>
 
-      {/* Related panel */}
       {selectedUser && (
         <div className="w-1/2 flex flex-col border-l-2 border-green-500 bg-green-50 dark:bg-green-900/10 transition-all duration-300">
-          {/* Related header */}
           <div className="p-5 border-b border-green-200 dark:border-green-800 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30">
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -409,8 +417,7 @@ export function DocumentViewer({ connectionId, database, collection }: DocumentV
                 </svg>
               </button>
             </div>
-            
-            {/* Status Filter */}
+
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-green-700 dark:text-green-400">Filter by status:</label>
               <select
@@ -428,7 +435,6 @@ export function DocumentViewer({ connectionId, database, collection }: DocumentV
             </div>
           </div>
 
-          {/* Related docs */}
           <div className="flex-1 overflow-auto p-4">
             {relatedLoading ? (
               <div className="flex items-center justify-center h-48">
@@ -443,16 +449,42 @@ export function DocumentViewer({ connectionId, database, collection }: DocumentV
               </div>
             ) : (
               <div className="space-y-3">
-                {relatedDocs.map((doc, i) => (
-                  <DocCard
-                    key={String(doc._id)}
-                    doc={doc}
-                    index={(relatedPage - 1) * 20 + i + 1}
-                    isSelected={false}
-                    cardRef={relatedCardRefs[i]}
-                    positionOffset={relatedPositionOffsets[i]}
-                  />
-                ))}
+                {relatedDocs.map((doc, i) => {
+                  const docId = String(doc._id);
+                  return (
+                    <DocCard
+                      key={docId}
+                      doc={doc}
+                      index={(relatedPage - 1) * 20 + i + 1}
+                      isSelected={false}
+                      isEditing={editingDocId === docId}
+                      onEnterEdit={() => setEditingDocId(docId)}
+                      onSave={async (updated) => {
+                        const id = String(doc._id);
+                        try {
+                          const payload: Record<string, unknown> = { ...updated };
+                          delete payload._id;
+                          delete payload.__v;
+                          await apiClient.put(
+                            `/connections/${connectionId}/databases/${database}/collections/user_patterns/documents/${id}`,
+                            payload
+                          );
+                          toast.success('Đã lưu');
+                          setEditingDocId(null);
+                          if (selectedUser) await loadRelated(selectedUser, relatedPage);
+                        } catch (err: unknown) {
+                          const e = err as { response?: { data?: { error?: string } }; message?: string };
+                          toast.error(e?.response?.data?.error ?? e?.message ?? 'Lưu thất bại');
+                          throw err;
+                        }
+                      }}
+                      onCancel={() => setEditingDocId(null)}
+                      onDelete={() => setDeleteTarget({ doc, collection: 'user_patterns' })}
+                      cardRef={relatedCardRefs[i]}
+                      positionOffset={relatedPositionOffsets[i]}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>
@@ -464,6 +496,12 @@ export function DocumentViewer({ connectionId, database, collection }: DocumentV
           />
         </div>
       )}
+
+      <DeleteConfirmModal
+        doc={deleteTarget?.doc ?? null}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
