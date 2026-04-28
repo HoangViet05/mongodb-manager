@@ -140,6 +140,16 @@ export function DocCard({
 
   const cardClickHandler = isEditing ? undefined : onClick;
 
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    } else if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      handleSave();
+    }
+  };
+
   return (
     <div
       ref={cardRef}
@@ -211,61 +221,66 @@ export function DocCard({
       )}
 
       {isEditing && (
-        <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
-          <p className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-2">Editing — double-click cancelled, use buttons below</p>
-          {editableEntries.map(([k, v]) => {
-            const type = detectFieldType(v);
-            const value = draft[k] ?? '';
-            const err = errors[k];
-            return (
-              <div key={k} className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                  {k} <span className="text-gray-400">({type})</span>
-                </label>
-                {type === 'boolean' ? (
-                  <select
-                    value={value}
-                    onChange={(e) => setDraft(d => ({ ...d, [k]: e.target.value }))}
-                    className="px-2 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                  </select>
-                ) : type === 'json' ? (
-                  <textarea
-                    value={value}
-                    onChange={(e) => setDraft(d => ({ ...d, [k]: e.target.value }))}
-                    rows={Math.min(8, value.split('\n').length + 1)}
-                    className={`px-2 py-1.5 text-xs font-mono bg-white dark:bg-gray-700 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${err ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
-                  />
-                ) : (
-                  <input
-                    type={type === 'number' ? 'number' : 'text'}
-                    value={value}
-                    onChange={(e) => setDraft(d => ({ ...d, [k]: e.target.value }))}
-                    placeholder={type === 'null' ? 'null' : ''}
-                    className={`px-2 py-1.5 text-sm bg-white dark:bg-gray-700 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${err ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
-                  />
-                )}
-                {err && <span className="text-xs text-red-500">{err}</span>}
-              </div>
-            );
-          })}
-          <div className="flex gap-2 pt-2">
+        <div className="mt-2 font-mono text-xs" onClick={(e) => e.stopPropagation()} onKeyDown={handleEditKeyDown}>
+          <div className="space-y-0.5">
+            <div className="flex items-baseline gap-2 px-2 py-1 text-gray-400 dark:text-gray-500">
+              <span className="select-none">_id:</span>
+              <span className="truncate">{String(doc._id)}</span>
+            </div>
+            {editableEntries.map(([k, v]) => {
+              const type = detectFieldType(v);
+              const value = draft[k] ?? '';
+              const err = errors[k];
+              const isMultiline = type === 'json' && value.includes('\n');
+              return (
+                <div key={k} className={`flex ${isMultiline ? 'flex-col' : 'items-baseline'} gap-2 px-2 py-1 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 rounded ${err ? 'bg-red-50 dark:bg-red-900/20' : ''}`}>
+                  <span className="text-purple-700 dark:text-purple-300 select-none flex-shrink-0">{k}:</span>
+                  {type === 'boolean' ? (
+                    <select
+                      value={value}
+                      onChange={(e) => setDraft(d => ({ ...d, [k]: e.target.value }))}
+                      className="bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 focus:bg-white dark:focus:bg-gray-900 rounded px-1 py-0 text-xs font-mono outline-none transition-colors text-orange-700 dark:text-orange-300"
+                    >
+                      <option value="true">true</option>
+                      <option value="false">false</option>
+                    </select>
+                  ) : type === 'json' ? (
+                    <textarea
+                      value={value}
+                      onChange={(e) => setDraft(d => ({ ...d, [k]: e.target.value }))}
+                      rows={Math.min(8, value.split('\n').length)}
+                      className="flex-1 bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 focus:bg-white dark:focus:bg-gray-900 rounded px-1 py-0 text-xs font-mono outline-none transition-colors text-gray-700 dark:text-gray-200 resize-y"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={value}
+                      onChange={(e) => setDraft(d => ({ ...d, [k]: e.target.value }))}
+                      placeholder={type === 'null' ? 'null' : ''}
+                      className={`flex-1 bg-transparent border border-transparent hover:border-gray-300 focus:border-blue-500 focus:bg-white dark:focus:bg-gray-900 rounded px-1 py-0 text-xs font-mono outline-none transition-colors ${type === 'number' ? 'text-blue-700 dark:text-blue-300' : type === 'null' ? 'text-gray-400' : 'text-green-700 dark:text-green-300'}`}
+                    />
+                  )}
+                  {err && <span className="text-[10px] text-red-500 ml-2">{err}</span>}
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex gap-2 pt-3 mt-2 border-t border-gray-200 dark:border-gray-700">
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow disabled:opacity-50"
+              className="px-3 py-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs rounded hover:from-blue-600 hover:to-blue-700 transition-all shadow disabled:opacity-50 font-sans"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
             <button
               onClick={onCancel}
               disabled={saving}
-              className="px-4 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-all disabled:opacity-50"
+              className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-all disabled:opacity-50 font-sans"
             >
               Cancel
             </button>
+            <span className="text-[10px] text-gray-400 self-center font-sans">Tip: Esc to cancel, Enter outside textarea to save</span>
           </div>
         </div>
       )}

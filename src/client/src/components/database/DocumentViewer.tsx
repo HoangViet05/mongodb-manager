@@ -125,7 +125,7 @@ export function DocumentViewer({ connectionId, database, collection, reloadToken
     setLoading(true);
     try {
       const filter = buildSearchFilter(searchFilter);
-      const data = await fetchDocuments(connectionId, database, collection, page, pageSize, filter);
+      const data = await fetchDocuments(connectionId, database, collection, page, pageSize, filter, { _id: -1 });
       setDocs(data.documents);
       setTotal(data.total);
     } catch (err: unknown) {
