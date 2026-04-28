@@ -19,6 +19,7 @@ export function DatabaseExplorer() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedDb, setSelectedDb] = useState<string | null>(null);
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
   const [loading, setLoading] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
   const activeConnectionId = useAppStore((state) => state.activeConnectionId);
@@ -153,7 +154,10 @@ export function DatabaseExplorer() {
                 {collections.map((col) => (
                   <button
                     key={col.name}
-                    onClick={() => setSelectedCollection(col.name)}
+                    onClick={() => {
+                      setSelectedCollection(col.name);
+                      setReloadToken(t => t + 1);
+                    }}
                     className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
                       selectedCollection === col.name
                         ? 'bg-white dark:bg-gray-700 shadow-md border-2 border-green-500'
@@ -192,6 +196,7 @@ export function DatabaseExplorer() {
             connectionId={activeConnectionId}
             database={selectedDb}
             collection={selectedCollection}
+            reloadToken={reloadToken}
           />
         ) : (
           <div className="flex items-center justify-center h-full bg-white dark:bg-gray-900">
