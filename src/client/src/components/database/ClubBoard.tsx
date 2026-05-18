@@ -225,7 +225,12 @@ const MissionNode = memo(function MissionNode({ data, id, selected }: NodeProps)
       </div>
 
       <div className="px-4 py-3 space-y-1.5">
-        <div className="text-xs font-mono break-all" style={{ color: from }}>
+        <div
+          className="text-xs font-mono break-all cursor-pointer hover:underline select-text"
+          style={{ color: from }}
+          onClick={() => copyToClipboard(String((data as Doc)._id))}
+          title="Click to copy ID"
+        >
           {String((data as Doc)._id)}
         </div>
 
@@ -329,7 +334,12 @@ const CameraNode = memo(function CameraNode({ data, selected }: NodeProps) {
       </div>
 
       <div className="px-4 py-3 space-y-1.5">
-        <div className="text-xs font-mono break-all" style={{ color: from }}>
+        <div
+          className="text-xs font-mono break-all cursor-pointer hover:underline select-text"
+          style={{ color: from }}
+          onClick={() => copyToClipboard(String((data as Doc)._id))}
+          title="Click to copy ID"
+        >
           {String((data as Doc)._id)}
         </div>
 
@@ -445,7 +455,12 @@ const ClubNode = memo(function ClubNode({ data, selected }: NodeProps) {
       </div>
 
       <div className="px-4 py-3 space-y-1.5">
-        <div className="text-xs font-mono break-all" style={{ color: from }}>
+        <div
+          className="text-xs font-mono break-all cursor-pointer hover:underline select-text"
+          style={{ color: from }}
+          onClick={() => copyToClipboard(String((data as Doc)._id))}
+          title="Click to copy ID"
+        >
           {String((data as Doc)._id)}
         </div>
 
@@ -578,7 +593,12 @@ const WorkerNode = memo(function WorkerNode({ data, selected }: NodeProps) {
       </div>
 
       <div className="px-4 py-3 space-y-1.5">
-        <div className="text-xs font-mono break-all" style={{ color: from }}>
+        <div
+          className="text-xs font-mono break-all cursor-pointer hover:underline select-text"
+          style={{ color: from }}
+          onClick={() => copyToClipboard(String((data as Doc)._id))}
+          title="Click to copy ID"
+        >
           {String((data as Doc)._id)}
         </div>
 
