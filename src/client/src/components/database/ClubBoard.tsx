@@ -13,6 +13,7 @@ import { AnnotationNode } from './AnnotationNode';
 import { saveAnnotations, loadAnnotations } from '../../utils/annotationStorage';
 import { statePersistenceService } from '../../utils/statePersistence';
 import apiClient from '../../api/apiClient';
+import toast from 'react-hot-toast';
 
 interface Doc { [key: string]: unknown; }
 
@@ -141,7 +142,7 @@ const MissionNode = memo(function MissionNode({ data, id, selected }: NodeProps)
   const displayName = String((data as Doc).name ?? (data as Doc).missionName ?? (data as Doc)._id ?? 'Mission');
   const copyToClipboard = (t: string) => {
     if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(t);
+      navigator.clipboard.writeText(t).then(() => toast.success('Copied!', { duration: 1500 }));
     } else {
       const el = document.createElement('textarea');
       el.value = t;
@@ -151,6 +152,7 @@ const MissionNode = memo(function MissionNode({ data, id, selected }: NodeProps)
       el.select();
       document.execCommand('copy');
       document.body.removeChild(el);
+      toast.success('Copied!', { duration: 1500 });
     }
   };
   const onViewResults = (data as Doc).onViewResults as (() => void) | undefined;
@@ -318,7 +320,7 @@ const CameraNode = memo(function CameraNode({ data, selected }: NodeProps) {
   const displayName = String((data as Doc).name ?? (data as Doc).cameraName ?? (data as Doc)._id ?? 'Camera');
   const copyToClipboard = (t: string) => {
     if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(t);
+      navigator.clipboard.writeText(t).then(() => toast.success('Copied!', { duration: 1500 }));
     } else {
       const el = document.createElement('textarea');
       el.value = t;
@@ -328,6 +330,7 @@ const CameraNode = memo(function CameraNode({ data, selected }: NodeProps) {
       el.select();
       document.execCommand('copy');
       document.body.removeChild(el);
+      toast.success('Copied!', { duration: 1500 });
     }
   };
 
@@ -454,7 +457,7 @@ const ClubNode = memo(function ClubNode({ data, selected }: NodeProps) {
   const displayName = String((data as Doc).name ?? (data as Doc).clubName ?? (data as Doc)._id ?? 'Club');
   const copyToClipboard = (t: string) => {
     if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(t);
+      navigator.clipboard.writeText(t).then(() => toast.success('Copied!', { duration: 1500 }));
     } else {
       const el = document.createElement('textarea');
       el.value = t;
@@ -464,6 +467,7 @@ const ClubNode = memo(function ClubNode({ data, selected }: NodeProps) {
       el.select();
       document.execCommand('copy');
       document.body.removeChild(el);
+      toast.success('Copied!', { duration: 1500 });
     }
   };
 
@@ -605,7 +609,7 @@ const WorkerNode = memo(function WorkerNode({ data, selected }: NodeProps) {
   const displayName = String((data as Doc).hostName ?? (data as Doc).name ?? (data as Doc).workerName ?? (data as Doc)._id ?? 'Worker');
   const copyToClipboard = (t: string) => {
     if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(t);
+      navigator.clipboard.writeText(t).then(() => toast.success('Copied!', { duration: 1500 }));
     } else {
       const el = document.createElement('textarea');
       el.value = t;
@@ -615,6 +619,7 @@ const WorkerNode = memo(function WorkerNode({ data, selected }: NodeProps) {
       el.select();
       document.execCommand('copy');
       document.body.removeChild(el);
+      toast.success('Copied!', { duration: 1500 });
     }
   };
 
