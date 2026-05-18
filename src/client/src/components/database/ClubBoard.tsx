@@ -139,7 +139,20 @@ const MissionNode = memo(function MissionNode({ data, id, selected }: NodeProps)
     .filter(([, v]) => v !== undefined);
 
   const displayName = String((data as Doc).name ?? (data as Doc).missionName ?? (data as Doc)._id ?? 'Mission');
-  const copyToClipboard = (t: string) => navigator.clipboard.writeText(t);
+  const copyToClipboard = (t: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(t);
+    } else {
+      const el = document.createElement('textarea');
+      el.value = t;
+      el.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+  };
   const onViewResults = (data as Doc).onViewResults as (() => void) | undefined;
 
   const renderField = (k: string, v: unknown, editable = false) => {
@@ -303,7 +316,20 @@ const CameraNode = memo(function CameraNode({ data, selected }: NodeProps) {
     .filter(([, v]) => v !== undefined);
 
   const displayName = String((data as Doc).name ?? (data as Doc).cameraName ?? (data as Doc)._id ?? 'Camera');
-  const copyToClipboard = (t: string) => navigator.clipboard.writeText(t);
+  const copyToClipboard = (t: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(t);
+    } else {
+      const el = document.createElement('textarea');
+      el.value = t;
+      el.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+  };
 
   const handleDoubleClick = (key: string, value: unknown) => {
     setEditingField(key);
@@ -426,7 +452,20 @@ const ClubNode = memo(function ClubNode({ data, selected }: NodeProps) {
     .filter(([, v]) => v !== undefined);
 
   const displayName = String((data as Doc).name ?? (data as Doc).clubName ?? (data as Doc)._id ?? 'Club');
-  const copyToClipboard = (t: string) => navigator.clipboard.writeText(t);
+  const copyToClipboard = (t: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(t);
+    } else {
+      const el = document.createElement('textarea');
+      el.value = t;
+      el.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+  };
 
   const handleDoubleClick = (key: string, value: unknown) => {
     setEditingField(key);
@@ -564,7 +603,20 @@ const WorkerNode = memo(function WorkerNode({ data, selected }: NodeProps) {
     .filter(([, v]) => v !== undefined);
 
   const displayName = String((data as Doc).hostName ?? (data as Doc).name ?? (data as Doc).workerName ?? (data as Doc)._id ?? 'Worker');
-  const copyToClipboard = (t: string) => navigator.clipboard.writeText(t);
+  const copyToClipboard = (t: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(t);
+    } else {
+      const el = document.createElement('textarea');
+      el.value = t;
+      el.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+    }
+  };
 
   const handleDoubleClick = (key: string, value: unknown) => {
     setEditingField(key);
