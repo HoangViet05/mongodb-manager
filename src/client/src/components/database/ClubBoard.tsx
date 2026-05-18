@@ -918,6 +918,7 @@ function buildMissionNodesFromData(
         id, type: 'missionNode', position: { x: pos.x, y: pos.y },
         data: {
           ...m,
+          _clubId: club.id,
           color: pos.color,
           onViewResults: onViewResults ? () => onViewResults(missionId, missionName) : undefined,
         },
@@ -959,6 +960,8 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
   });
   const [cameraMenuOpen, setCameraMenuOpen] = useState(false);
   const [missionsMenuOpen, setMissionsMenuOpen] = useState(false);
+  // ── Mission visibility (per club) ─────────────────────────────────────────
+  const [hiddenMissionClubIds, setHiddenMissionClubIds] = useState<Set<string>>(new Set());
   
   // ── Result Missions Panel ─────────────────────────────────────────────────
   const [resultPanel, setResultPanel] = useState<{
@@ -1398,21 +1401,49 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
     setHiddenCameraIds(new Set());
   }, []);
 
+  const toggleMissionClub = useCallback((clubId: string) => {
+    setHiddenMissionClubIds(prev => {
+      const next = new Set(prev);
+      if (next.has(clubId)) next.delete(clubId);
+      else next.add(clubId);
+      return next;
+    });
+  }, []);
+
+  const hideAllMissionClubs = useCallback(() => {
+    setHiddenMissionClubIds(new Set(nodes.filter(n => n.type === 'clubNode').map(n => n.id)));
+  }, [nodes]);
+
+  const showAllMissionClubs = useCallback(() => {
+    setHiddenMissionClubIds(new Set());
+  }, []);
+
   // Apply hidden state: use ReactFlow's `hidden` prop so nodes stay in state
   const displayNodes = useMemo(() => nodes.map(n => {
-    if (n.type !== 'cameraNode') return n;
-    const isHidden = hiddenCameraIds.has(n.id);
-    if (showHiddenCameras) return { ...n, hidden: false, data: { ...n.data, _dimmed: isHidden } };
-    return { ...n, hidden: isHidden, data: { ...n.data, _dimmed: false } };
-  }), [nodes, hiddenCameraIds, showHiddenCameras]);
+    if (n.type === 'cameraNode') {
+      const isHidden = hiddenCameraIds.has(n.id);
+      if (showHiddenCameras) return { ...n, hidden: false, data: { ...n.data, _dimmed: isHidden } };
+      return { ...n, hidden: isHidden, data: { ...n.data, _dimmed: false } };
+    }
+    if (n.type === 'missionNode') {
+      const isHidden = hiddenMissionClubIds.has(n.data._clubId as string);
+      return { ...n, hidden: isHidden };
+    }
+    return n;
+  }), [nodes, hiddenCameraIds, showHiddenCameras, hiddenMissionClubIds]);
 
   const displayEdges = useMemo(() => edges.map(e => {
-    const isCameraEdge = e.target.startsWith('camera-');
-    if (!isCameraEdge) return e;
-    const isHidden = hiddenCameraIds.has(e.target);
-    if (showHiddenCameras) return { ...e, hidden: false, style: { ...e.style, opacity: isHidden ? 0.25 : 1 } };
-    return { ...e, hidden: isHidden };
-  }), [edges, hiddenCameraIds, showHiddenCameras]);
+    if (e.target.startsWith('camera-')) {
+      const isHidden = hiddenCameraIds.has(e.target);
+      if (showHiddenCameras) return { ...e, hidden: false, style: { ...e.style, opacity: isHidden ? 0.25 : 1 } };
+      return { ...e, hidden: isHidden };
+    }
+    if (e.target.startsWith('mission-')) {
+      const isHidden = hiddenMissionClubIds.has(e.source);
+      return { ...e, hidden: isHidden };
+    }
+    return e;
+  }), [edges, hiddenCameraIds, showHiddenCameras, hiddenMissionClubIds]);
 
   return (
     <div className="flex flex-col h-full">
@@ -1539,7 +1570,7 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
             )}
           </div>
 
-          {/* ── Missions load-more button ── */}
+          {/* ── Missions visibility button ── */}
           {(() => {
             const clubNodesForMenu = nodes.filter(n => n.type === 'clubNode');
             const totalMissions = nodes.filter(n => n.type === 'missionNode').length;
@@ -1548,54 +1579,92 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
               <div className="relative">
                 <button
                   onClick={() => setMissionsMenuOpen(o => !o)}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
-                  title="Load more missions per club"
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                    hiddenMissionClubIds.size > 0
+                      ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/40 dark:text-purple-300'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                  title="Manage mission visibility per club"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                   </svg>
                   Missions
-                  <span className="bg-purple-500 text-white rounded-full px-1.5 text-[10px] font-bold leading-4">
-                    {totalMissions}
-                  </span>
+                  {hiddenMissionClubIds.size > 0 ? (
+                    <span className="bg-purple-600 text-white rounded-full px-1.5 text-[10px] font-bold leading-4">
+                      {hiddenMissionClubIds.size}
+                    </span>
+                  ) : (
+                    <span className="bg-purple-500 text-white rounded-full px-1.5 text-[10px] font-bold leading-4">
+                      {totalMissions}
+                    </span>
+                  )}
+                  <svg className={`w-3 h-3 transition-transform ${missionsMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
                 {missionsMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setMissionsMenuOpen(false)} />
                     <div className="absolute left-0 top-full mt-1 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-72 overflow-hidden">
-                  <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
-                    <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">Load more missions per club</span>
-                  </div>
-                  <div className="max-h-72 overflow-y-auto">
-                    {clubNodesForMenu.map(club => {
-                      const clubName = String(club.data.name ?? club.data.clubName ?? club.data._id);
-                      const total = allMissionsRef.current.filter(m => {
-                        const bids = Array.isArray(m.branchIds) ? m.branchIds : [];
-                        return bids.some((bid: unknown) => String(bid) === String(club.data.branchId ?? ''));
-                      }).length;
-                      const showing = missionLimitPerClub[club.id] ?? 10;
-                      const canLoadMore = showing < total;
-                      return (
-                        <div key={club.id} className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">{clubName}</p>
-                            <p className="text-[10px] text-gray-400">{Math.min(showing, total)} / {total} missions</p>
-                          </div>
-                          {canLoadMore ? (
-                            <button
-                              onClick={() => loadMoreMissions(club.id)}
-                              className="flex-shrink-0 px-2 py-1 text-[10px] font-medium text-white bg-purple-500 hover:bg-purple-600 rounded transition-colors"
-                            >
-                              +5 more
-                            </button>
-                          ) : (
-                            <span className="flex-shrink-0 text-[10px] text-gray-400">all loaded</span>
-                          )}
+                      <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                          {totalMissions} missions
+                        </span>
+                        <div className="flex gap-1">
+                          <button onClick={showAllMissionClubs} className="px-2 py-0.5 text-[10px] bg-purple-50 hover:bg-purple-100 text-purple-700 rounded font-medium transition-colors">
+                            Show all
+                          </button>
+                          <button onClick={hideAllMissionClubs} className="px-2 py-0.5 text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 rounded font-medium transition-colors">
+                            Hide all
+                          </button>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                      </div>
+                      <div className="max-h-72 overflow-y-auto">
+                        {clubNodesForMenu.map(club => {
+                          const clubName = String(club.data.name ?? club.data.clubName ?? club.data._id);
+                          const total = allMissionsRef.current.filter(m => {
+                            const bids = Array.isArray(m.branchIds) ? m.branchIds : [];
+                            return bids.some((bid: unknown) => String(bid) === String(club.data.branchId ?? ''));
+                          }).length;
+                          const showing = missionLimitPerClub[club.id] ?? 10;
+                          const canLoadMore = showing < total;
+                          const isHidden = hiddenMissionClubIds.has(club.id);
+                          return (
+                            <div key={club.id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
+                              <div
+                                className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+                                onClick={() => toggleMissionClub(club.id)}
+                              >
+                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isHidden ? 'border-gray-300 bg-white dark:bg-gray-800' : 'border-purple-500 bg-purple-500'}`}>
+                                  {!isHidden && (
+                                    <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className={`text-xs font-medium truncate ${isHidden ? 'text-gray-400 line-through' : 'text-gray-700 dark:text-gray-200'}`}>
+                                    {clubName}
+                                  </p>
+                                  <p className="text-[10px] text-gray-400">{Math.min(showing, total)} / {total} missions</p>
+                                </div>
+                              </div>
+                              {canLoadMore ? (
+                                <button
+                                  onClick={() => loadMoreMissions(club.id)}
+                                  className="flex-shrink-0 px-2 py-1 text-[10px] font-medium text-white bg-purple-500 hover:bg-purple-600 rounded transition-colors"
+                                >
+                                  +5 more
+                                </button>
+                              ) : (
+                                <span className="flex-shrink-0 text-[10px] text-gray-400">all loaded</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </>
                 )}
               </div>

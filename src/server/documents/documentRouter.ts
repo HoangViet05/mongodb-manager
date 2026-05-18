@@ -24,6 +24,7 @@ router.get(
 
       if (req.query.sort) {
         query.sort = JSON.parse(req.query.sort as string);
+        console.log('[documents] sort param received:', req.query.sort, '→ parsed:', query.sort);
       }
 
       if (req.query.page) {
