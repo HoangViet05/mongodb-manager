@@ -125,7 +125,11 @@ const MissionNode = memo(function MissionNode({ data, id, selected }: NodeProps)
     setEditKey(key);
     setEditValue(typeof value === 'object' ? JSON.stringify(value) : String(value ?? ''));
   };
-  const handleSaveEdit = () => setEditingField(null);
+  const handleSaveEdit = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (editingField) (data as any).onSaveField?.(id, editingField, editKey, editValue);
+    setEditingField(null);
+  };
   const handleCancelEdit = () => setEditingField(null);
 
   const color = (data.color as Color | undefined) ?? MISSION_COLOR;
@@ -299,7 +303,7 @@ const MissionNode = memo(function MissionNode({ data, id, selected }: NodeProps)
 // ─── Camera Node ─────────────────────────────────────────────────────────────
 const CAMERA_COLOR = { from: '#14b8a6', to: '#0d9488', border: '#14b8a6' }; // teal
 
-const CameraNode = memo(function CameraNode({ data, selected }: NodeProps) {
+const CameraNode = memo(function CameraNode({ data, selected, id }: NodeProps) {
   const [expanded, toggleExpanded] = useAutoCollapse(selected);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editKey, setEditKey] = useState('');
@@ -339,7 +343,11 @@ const CameraNode = memo(function CameraNode({ data, selected }: NodeProps) {
     setEditKey(key);
     setEditValue(typeof value === 'object' ? JSON.stringify(value) : String(value ?? ''));
   };
-  const handleSaveEdit = () => setEditingField(null);
+  const handleSaveEdit = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (editingField) (data as any).onSaveField?.(id, editingField, editKey, editValue);
+    setEditingField(null);
+  };
   const handleCancelEdit = () => setEditingField(null);
 
   return (
@@ -437,7 +445,7 @@ const CameraNode = memo(function CameraNode({ data, selected }: NodeProps) {
 });
 
 // ─── Club Node ────────────────────────────────────────────────────────────────
-const ClubNode = memo(function ClubNode({ data, selected }: NodeProps) {
+const ClubNode = memo(function ClubNode({ data, selected, id }: NodeProps) {
   const [expanded, toggleExpanded] = useAutoCollapse(selected);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editKey, setEditKey] = useState('');
@@ -476,7 +484,11 @@ const ClubNode = memo(function ClubNode({ data, selected }: NodeProps) {
     setEditKey(key);
     setEditValue(typeof value === 'object' ? JSON.stringify(value) : String(value ?? ''));
   };
-  const handleSaveEdit = () => setEditingField(null);
+  const handleSaveEdit = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (editingField) (data as any).onSaveField?.(id, editingField, editKey, editValue);
+    setEditingField(null);
+  };
   const handleCancelEdit = () => setEditingField(null);
 
   return (
@@ -589,7 +601,7 @@ const ClubNode = memo(function ClubNode({ data, selected }: NodeProps) {
 });
 
 // ─── Worker Node ──────────────────────────────────────────────────────────────
-const WorkerNode = memo(function WorkerNode({ data, selected }: NodeProps) {
+const WorkerNode = memo(function WorkerNode({ data, selected, id }: NodeProps) {
   const [expanded, toggleExpanded] = useAutoCollapse(selected);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editKey, setEditKey] = useState('');
@@ -628,7 +640,11 @@ const WorkerNode = memo(function WorkerNode({ data, selected }: NodeProps) {
     setEditKey(key);
     setEditValue(typeof value === 'object' ? JSON.stringify(value) : String(value ?? ''));
   };
-  const handleSaveEdit = () => setEditingField(null);
+  const handleSaveEdit = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (editingField) (data as any).onSaveField?.(id, editingField, editKey, editValue);
+    setEditingField(null);
+  };
   const handleCancelEdit = () => setEditingField(null);
 
   return (
@@ -974,7 +990,8 @@ function buildMissionNodesFromData(
   clubNodes: Node[],
   limitPerClub: Record<string, number>,
   saved: Record<string, { x: number; y: number; color?: Color }>,
-  onViewResults?: (missionId: string, missionName: string) => void
+  onViewResults?: (missionId: string, missionName: string) => void,
+  onSaveField?: (nodeId: string, oldKey: string, newKey: string, value: string) => void
 ): Node[] {
   const result: Node[] = [];
   clubNodes.forEach(club => {
@@ -998,6 +1015,7 @@ function buildMissionNodesFromData(
           _clubId: club.id,
           color: pos.color,
           onViewResults: onViewResults ? () => onViewResults(missionId, missionName) : undefined,
+          onSaveField,
         },
       });
     });
@@ -1201,7 +1219,7 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
     const clubNodes: Node[] = clubs.map((c, i) => {
       const id = `club-${String(c._id)}`;
       const pos = saved[id] ?? { x: 60, y: 60 + i * 180 };
-      return { id, type: 'clubNode', position: { x: pos.x, y: pos.y }, data: { ...c, color: pos.color } };
+      return { id, type: 'clubNode', position: { x: pos.x, y: pos.y }, data: { ...c, color: pos.color, onSaveField: (...a: Parameters<typeof onSaveField>) => onSaveFieldRef.current(...a) } };
     });
 
     if (!workIds.length) {
@@ -1235,13 +1253,13 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
         const workerNodes: Node[] = allWorkers.map((w, i) => {
           const id = `worker-${String(w._id)}`;
           const pos = saved[id] ?? { x: 500, y: 60 + i * 180 };
-          return { id, type: 'workerNode', position: { x: pos.x, y: pos.y }, data: { ...w, color: pos.color } };
+          return { id, type: 'workerNode', position: { x: pos.x, y: pos.y }, data: { ...w, color: pos.color, onSaveField: (...a: Parameters<typeof onSaveField>) => onSaveFieldRef.current(...a) } };
         });
 
         const cameraNodes: Node[] = allCameras.map((cam, i) => {
           const id = `camera-${String(cam._id)}`;
           const pos = saved[id] ?? { x: 900, y: 60 + i * 160 };
-          return { id, type: 'cameraNode', position: { x: pos.x, y: pos.y }, data: { ...cam, color: pos.color } };
+          return { id, type: 'cameraNode', position: { x: pos.x, y: pos.y }, data: { ...cam, color: pos.color, onSaveField: (...a: Parameters<typeof onSaveField>) => onSaveFieldRef.current(...a) } };
         });
 
         // Restore saved mission limits, fallback to 10 for new clubs
@@ -1250,7 +1268,7 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
         clubNodes.forEach(c => { mergedLimits[c.id] = savedLimits[c.id] ?? 10; });
         setMissionLimitPerClub(mergedLimits);
 
-        const missionNodes = buildMissionNodesFromData(allMissions, clubNodes, mergedLimits, saved, (id, name) => openResultMissionsRef.current(id, name));
+        const missionNodes = buildMissionNodesFromData(allMissions, clubNodes, mergedLimits, saved, (id, name) => openResultMissionsRef.current(id, name), (...a) => onSaveFieldRef.current(...a));
 
         const allNodes = [...clubNodes, ...workerNodes, ...cameraNodes, ...missionNodes];
         const loadedAnnotations = loadAnnotations(connectionId, database, 'club-board');
@@ -1315,6 +1333,42 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
       n.id === clubId ? { ...n, data: { ...n.data, [idField]: workerId } } : n
     ));
   }, [connectionId, database]);
+
+  // ── Save field: update DB + local node state ─────────────────────────────
+  const onSaveField = useCallback(async (nodeId: string, oldKey: string, newKey: string, rawValue: string) => {
+    const prefixMap: Record<string, string> = {
+      'camera-': 'cameras',
+      'club-': 'clubs',
+      'worker-': 'workers',
+      'mission-': 'clubs_missions',
+    };
+    const prefix = Object.keys(prefixMap).find(p => nodeId.startsWith(p));
+    if (!prefix) return;
+    const collection = prefixMap[prefix];
+    const docId = nodeId.slice(prefix.length);
+
+    let parsedValue: unknown = rawValue;
+    try { parsedValue = JSON.parse(rawValue); } catch { /* keep as string */ }
+
+    try {
+      await apiClient.put(
+        `/connections/${connectionId}/databases/${database}/collections/${collection}/documents/${docId}`,
+        { [newKey]: parsedValue }
+      );
+      setNodes(nds => nds.map(n => {
+        if (n.id !== nodeId) return n;
+        const d = { ...n.data } as Record<string, unknown>;
+        if (oldKey !== newKey) delete d[oldKey];
+        d[newKey] = parsedValue;
+        return { ...n, data: d };
+      }));
+      toast.success('Saved!', { duration: 1500 });
+    } catch {
+      toast.error('Save failed', { duration: 2000 });
+    }
+  }, [connectionId, database]);
+  const onSaveFieldRef = useRef(onSaveField);
+  onSaveFieldRef.current = onSaveField;
 
   // ── Drag-to-connect: club handle → worker handle ──────────────────────────
   const handleConnect = useCallback((connection: Connection) => {
@@ -1453,7 +1507,7 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
       setNodes(nds => {
         const clubNodes   = nds.filter(n => n.type === 'clubNode');
         const nonMission  = nds.filter(n => n.type !== 'missionNode');
-        const newMissions = buildMissionNodesFromData(allMissionsRef.current, clubNodes, newLimits, saved, (id, name) => openResultMissionsRef.current(id, name));
+        const newMissions = buildMissionNodesFromData(allMissionsRef.current, clubNodes, newLimits, saved, (id, name) => openResultMissionsRef.current(id, name), (...a) => onSaveFieldRef.current(...a));
         const updated = [...nonMission, ...newMissions];
         setEdgesDeduped(buildEdges(updated, workerIdFieldRef.current));
         return updated;
