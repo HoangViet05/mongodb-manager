@@ -62,8 +62,11 @@ export function DatabaseExplorer() {
       if (response.data.success) {
         setCollections(response.data.data);
         setSelectedDb(dbName);
+        const clubsCol = response.data.data.find((col: Collection) => col.name === 'clubs');
         const usersCol = response.data.data.find((col: Collection) => col.name === 'users');
-        if (usersCol) {
+        if (clubsCol) {
+          setSelectedCollection('clubs');
+        } else if (usersCol) {
           setSelectedCollection('users');
         }
       } else {

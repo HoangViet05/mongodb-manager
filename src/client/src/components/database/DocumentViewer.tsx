@@ -90,7 +90,7 @@ export function DocumentViewer({ connectionId, database, collection, reloadToken
   const [page, setPage] = useState(1);
   const pageSize = 20;
   const [total, setTotal] = useState(0);
-  const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'board'>(collection === 'clubs' ? 'board' : 'list');
 
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ doc: Doc; collection: string } | null>(null);
@@ -119,6 +119,7 @@ export function DocumentViewer({ connectionId, database, collection, reloadToken
     setEditingDocId(null);
     setSearchFilter(null);
     setSearchVisible(false);
+    setViewMode(collection === 'clubs' ? 'board' : 'list');
   }, [collection, database, connectionId]);
 
   const load = useCallback(async () => {

@@ -210,6 +210,21 @@ class StatePersistenceService {
   }
 
   // ============================================================================
+  // Mission Visibility Persistence (hidden club IDs)
+  // ============================================================================
+
+  saveMissionVisibility(hiddenClubIds: Set<string>, connectionId: string, database: string): void {
+    const key = this.generateKey('mission-visibility', connectionId, database);
+    this.safeWrite(key, Array.from(hiddenClubIds));
+  }
+
+  loadMissionVisibility(connectionId: string, database: string): Set<string> {
+    const key = this.generateKey('mission-visibility', connectionId, database);
+    const arr = this.safeRead<string[]>(key, []);
+    return new Set(arr);
+  }
+
+  // ============================================================================
   // Theme Preference Persistence (Global)
   // ============================================================================
 
@@ -280,7 +295,7 @@ class StatePersistenceService {
   // ============================================================================
 
   clearState(connectionId: string, database: string): void {
-    const features = ['node-positions', 'node-colors', 'camera-visibility', 'mission-limits', 'annotation-boxes'];
+    const features = ['node-positions', 'node-colors', 'camera-visibility', 'mission-limits', 'mission-visibility', 'annotation-boxes'];
     
     features.forEach(feature => {
       const key = this.generateKey(feature, connectionId, database);

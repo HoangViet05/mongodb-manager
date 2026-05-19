@@ -1056,7 +1056,9 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
   const [cameraMenuOpen, setCameraMenuOpen] = useState(false);
   const [missionsMenuOpen, setMissionsMenuOpen] = useState(false);
   // ── Mission visibility (per club) ─────────────────────────────────────────
-  const [hiddenMissionClubIds, setHiddenMissionClubIds] = useState<Set<string>>(new Set());
+  const [hiddenMissionClubIds, setHiddenMissionClubIds] = useState<Set<string>>(() =>
+    statePersistenceService.loadMissionVisibility(connectionId, database)
+  );
   
   // ── Result Missions Panel ─────────────────────────────────────────────────
   const [resultPanel, setResultPanel] = useState<{
@@ -1094,6 +1096,12 @@ function ClubBoardInner({ connectionId, database, clubs }: ClubBoardProps) {
   useEffect(() => {
     statePersistenceService.saveCameraVisibility(hiddenCameraIds, showHiddenCameras, connectionId, database);
   }, [hiddenCameraIds, showHiddenCameras, connectionId, database]);
+
+  // Save mission visibility whenever it changes
+  useEffect(() => {
+    statePersistenceService.saveMissionVisibility(hiddenMissionClubIds, connectionId, database);
+  }, [hiddenMissionClubIds, connectionId, database]);
+
   // ── Missions ──────────────────────────────────────────────────────────────
   // allMissions: full list fetched from server (keyed by clubId/branchId)
   const allMissionsRef = useRef<Doc[]>([]);
